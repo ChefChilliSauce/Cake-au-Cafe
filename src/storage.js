@@ -1,60 +1,68 @@
-import sqlite3 from "sqlite3";
-const db = new sqlite3.Database("./birthdays.sqlite");
+import pkg from "pg";
+const { Pool } = pkg;
 
-db.run(`
-  CREATE TABLE IF NOT EXISTS birthdays (
-    user_id    TEXT PRIMARY KEY,
-    username   TEXT,
-    day        INTEGER,
-    month      INTEGER,
-    year       INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
-export function getBirthday(userId, cb) {
-  db.get("SELECT * FROM birthdays WHERE user_id = ?", [userId], (err, row) =>
-    cb(err, row)
+(async () => {
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS birthdays (
+      user_id    TEXT PRIMARY KEY,
+      username   TEXT,
+      day        INTEGER NOT NULL,
+      month      INTEGER NOT NULL,
+      year       INTEGER NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );`
+  );
+})();
+
+export async function getBirthday(userId) {
+  const res = await pool.query("SELECT * FROM birthdays WHERE user_id = $1", [
+    userId,
+  ]);
+  return res.rows[0] || null;
+}
+
+export async function addBirthday(userId, username, day, month, year) {
+  await pool.query(
+    `INSERT INTO birthdays(user_id, username, day, month, year)
+     VALUES($1,$2,$3,$4,$5)
+     ON CONFLICT(user_id) DO NOTHING`,
+    [userId, username, day, month, year]
   );
 }
 
-export function addBirthday(userId, username, day, month, year, cb) {
-  db.run(
-    "INSERT INTO birthdays (user_id, username, day, month, year) VALUES (?, ?, ?, ?, ?)",
-    [userId, username, day, month, year],
-    (err) => cb(err)
-  );
+export async function deleteBirthday(userId) {
+  const res = await pool.query("DELETE FROM birthdays WHERE user_id = $1", [
+    userId,
+  ]);
+  return res.rowCount;
 }
 
-export function deleteBirthday(userId, cb) {
-  db.run("DELETE FROM birthdays WHERE user_id = ?", [userId], function (err) {
-    cb(err, this.changes);
-  });
+export async function listByMonth(month) {
+  const res = await pool.query("SELECT * FROM birthdays WHERE month = $1", [
+    month,
+  ]);
+  return res.rows;
 }
 
-export function listByMonth(month, cb) {
-  db.all("SELECT * FROM birthdays WHERE month = ?", [month], (err, rows) =>
-    cb(err, rows)
-  );
+export async function listUpcoming(daysAhead) {
+  const res = await pool.query("SELECT * FROM birthdays");
+  const rows = res.rows;
+  const today = new Date();
+  const upcomingSet = new Set();
+  for (let i = 0; i < daysAhead; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() + i);
+    upcomingSet.add(`${d.getMonth()}-${d.getDate()}`);
+  }
+  return rows.filter((r) => upcomingSet.has(`${r.month}-${r.day}`));
 }
 
-export function listUpcoming(daysAhead, cb) {
-  db.all("SELECT * FROM birthdays", [], (err, rows) => {
-    if (err) return cb(err);
-
-    const today = new Date();
-    const upcomingSet = new Set();
-    for (let i = 0; i < daysAhead; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() + i);
-      upcomingSet.add(`${d.getMonth()}-${d.getDate()}`);
-    }
-
-    const result = rows.filter((r) => upcomingSet.has(`${r.month}-${r.day}`));
-    cb(null, result);
-  });
-}
-
-export function listAll(cb) {
-  db.all("SELECT * FROM birthdays", [], (err, rows) => cb(err, rows));
+export async function listAll() {
+  const res = await pool.query("SELECT * FROM birthdays");
+  return res.rows;
 }
