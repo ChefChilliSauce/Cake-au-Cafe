@@ -47,7 +47,7 @@ ANNOUNCE_CHANNEL_ID=YOUR_DISCORD_ANNOUNCEMENT_CHANNEL_ID
 npm start
 
 
-###💬 Bot Commands
+### 💬 Bot Commands
 | Command            | Description                          |
 | ------------------ | ------------------------------------ |
 | `/birthday add`    | Register your birthday               |
@@ -55,12 +55,12 @@ npm start
 | `/birthday update` | Update your birthday                 |
 | `/birthday remove` | Remove your birthday from the system |
 
-###🧠 Project Structure
+### 🧠 Project Structure
 -index.js → Main entry point (bot login and setup)
 -storage.js → PostgreSQL connection and query logic
 -commands.js → All command handlers
 
-###🧪 Database Schema
+### 🧪 Database Schema
 CREATE TABLE IF NOT EXISTS birthdays (
   user_id    TEXT PRIMARY KEY,
   username   TEXT,
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS birthdays (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-###⏰ Cron Job: Birthday Announcements
+### ⏰ Cron Job: Birthday Announcements
 Every day at 12 AM IST, the bot:
 -Fetches birthdays for that day
 -Sends a celebratory direct message to the celebrant
@@ -84,16 +84,16 @@ Every day at 12:05 AM IST, the bot:
 -Deletes the birthday data from the database of the user who left the server
 
 ###🧩 TODO / Upcoming Features
-- [ ]Per-user timezone support
-- [ ]Birthday countdown reminders
-- [ ]Web dashboard (view/edit birthdays)
-- [ ]Auto-assign birthday roles
-- [ ]Monthly birthday leaderboard
+- []Per-user timezone support
+- []Birthday countdown reminders
+- []Web dashboard (view/edit birthdays)
+- []Auto-assign birthday roles
+- []Monthly birthday leaderboard
 
-###🙌 Contributions
+### 🙌 Contributions
 Found a bug? Want to add a feature?
 Feel free to open an Issue or submit a Pull Request.
 You can also join [@CafeSauce](https://discord.gg/XkX8DGbN5d) on Discord for quick feedback or collabs.
 
-###📄 License
+### 📄 License
 This project is open source under the MIT License.
