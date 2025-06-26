@@ -84,11 +84,11 @@ Every day at 12:05 AM IST, the bot:
 -Deletes the birthday data from the database of the user who left the server
 
 ###🧩 TODO / Upcoming Features
-- []Per-user timezone support
-- []Birthday countdown reminders
-- []Web dashboard (view/edit birthdays)
-- []Auto-assign birthday roles
-- []Monthly birthday leaderboard
+-[ ] Per-user timezone support
+-[ ] Birthday countdown reminders
+-[ ] Web dashboard (view/edit birthdays)
+-[ ] Auto-assign birthday roles
+-[ ] Monthly birthday leaderboard
 
 ### 🙌 Contributions
 Found a bug? Want to add a feature?
