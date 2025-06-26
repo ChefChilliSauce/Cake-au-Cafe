@@ -1,29 +1,41 @@
 import pkg from "pg";
 const { Pool } = pkg;
 
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.RAILWAY_POSTGRESQL_CONNECTION_URL ||
+  process.env.RAILWAY_DATABASE_URL;
+
+if (!connectionString) {
+  console.error("🚨 No Postgres connection string found in env!");
+  process.exit(1);
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
   ssl: { rejectUnauthorized: false },
 });
 
 (async () => {
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS birthdays (
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS birthdays (
       user_id    TEXT PRIMARY KEY,
       username   TEXT,
       day        INTEGER NOT NULL,
       month      INTEGER NOT NULL,
       year       INTEGER NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`
-  );
+    )
+  `);
 })();
 
 export async function getBirthday(userId) {
-  const res = await pool.query("SELECT * FROM birthdays WHERE user_id = $1", [
-    userId,
-  ]);
-  return res.rows[0] || null;
+  const { rows } = await pool.query(
+    "SELECT * FROM birthdays WHERE user_id = $1",
+    [userId]
+  );
+  return rows[0] || null;
 }
 
 export async function addBirthday(userId, username, day, month, year) {
@@ -43,15 +55,15 @@ export async function deleteBirthday(userId) {
 }
 
 export async function listByMonth(month) {
-  const res = await pool.query("SELECT * FROM birthdays WHERE month = $1", [
-    month,
-  ]);
-  return res.rows;
+  const { rows } = await pool.query(
+    "SELECT * FROM birthdays WHERE month = $1",
+    [month]
+  );
+  return rows;
 }
 
 export async function listUpcoming(daysAhead) {
-  const res = await pool.query("SELECT * FROM birthdays");
-  const rows = res.rows;
+  const { rows } = await pool.query("SELECT * FROM birthdays");
   const today = new Date();
   const upcomingSet = new Set();
   for (let i = 0; i < daysAhead; i++) {
@@ -63,6 +75,6 @@ export async function listUpcoming(daysAhead) {
 }
 
 export async function listAll() {
-  const res = await pool.query("SELECT * FROM birthdays");
-  return res.rows;
+  const { rows } = await pool.query("SELECT * FROM birthdays");
+  return rows;
 }
