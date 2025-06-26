@@ -54,3 +54,7 @@ export function listUpcoming(daysAhead, cb) {
     cb(null, result);
   });
 }
+
+export function listAll(cb) {
+  db.all("SELECT * FROM birthdays", [], (err, rows) => cb(err, rows));
+}
