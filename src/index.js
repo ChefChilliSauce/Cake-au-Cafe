@@ -38,24 +38,19 @@ client.once("ready", () => {
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) return;
+
   const { commandName } = interaction;
-  switch (commandName) {
-    case "wish": {
-      await interaction.deferReply({
-        flags: EPHEMERAL_FLAG,
-      });
 
-      const userId = interaction.user.id;
-      const username = interaction.user.username;
+  try {
+    await interaction.deferReply({ flags: EPHEMERAL_FLAG });
 
-      storage.getBirthday(userId, (err, row) => {
-        if (err) {
-          return interaction.editReply({
-            content: "Database error.",
-            flags: EPHEMERAL_FLAG,
-          });
-        }
-        if (row) {
+    switch (commandName) {
+      case "wish": {
+        const userId = interaction.user.id;
+        const username = interaction.user.username;
+
+        const existing = await storage.getBirthday(userId);
+        if (existing) {
           return interaction.editReply({
             content:
               "You’ve already set your birthday—ask a mod to remove it if it’s wrong.",
@@ -65,94 +60,62 @@ client.on("interactionCreate", async (interaction) => {
 
         const day = interaction.options.getInteger("day");
         const monthName = interaction.options.getString("month");
-        const month = monthArr.indexOf(monthName);
         const year = interaction.options.getInteger("year");
+        const month = monthArr.indexOf(monthName);
 
-        storage.addBirthday(userId, username, day, month, year, (err) => {
-          if (err) {
-            return interaction.editReply({
-              content: "Could not save your birthday.",
-              flags: EPHEMERAL_FLAG,
-            });
-          }
+        await storage.addBirthday(userId, username, day, month, year);
 
-          interaction.editReply({
-            content: `Your birthday is saved as **${day} ${monthName} ${year}**.`,
-            flags: EPHEMERAL_FLAG,
-          });
-        });
-      });
-
-      break;
-    }
-
-    case "remove": {
-      await interaction.deferReply({
-        flags: EPHEMERAL_FLAG,
-      });
-
-      const member = interaction.member;
-      const modRole = process.env.BARISTA_ID;
-      const adminOne = process.env.MEOW_ID;
-      const adminTwo = process.env.NOM_ID;
-      if (
-        !(
-          member.roles.cache.has(modRole) ||
-          member.roles.cache.has(adminOne) ||
-          member.roles.cache.has(adminTwo)
-        )
-      ) {
         return interaction.editReply({
-          content: "You need the Admin or Moderator role to do that.",
+          content: `Your birthday is saved as **${day} ${monthName} ${year}**.`,
           flags: EPHEMERAL_FLAG,
         });
       }
 
-      const targetUser = interaction.options.getUser("user");
+      case "remove": {
+        const member = interaction.member;
+        const modRole = process.env.BARISTA_ID;
+        const adminOne = process.env.MEOW_ID;
+        const adminTwo = process.env.NOM_ID;
 
-      storage.deleteBirthday(targetUser.id, (err, changes) => {
-        if (err) {
+        if (
+          !(
+            member.roles.cache.has(modRole) ||
+            member.roles.cache.has(adminOne) ||
+            member.roles.cache.has(adminTwo)
+          )
+        ) {
           return interaction.editReply({
-            content: "Could not delete birthday. Try again later.",
+            content: "You need the Admin or Moderator role to do that.",
             flags: EPHEMERAL_FLAG,
           });
         }
+
+        const targetUser = interaction.options.getUser("user");
+        const changes = await storage.deleteBirthday(targetUser.id);
+
         if (changes === 0) {
           return interaction.editReply({
             content: `No birthday found for <@${targetUser.id}>.`,
             flags: EPHEMERAL_FLAG,
           });
         }
-        interaction.editReply({
+
+        return interaction.editReply({
           content: `Removed birthday for <@${targetUser.id}>.`,
           flags: EPHEMERAL_FLAG,
         });
-      });
+      }
 
-      break;
-    }
+      case "month": {
+        const inputMonth = interaction.options.getInteger("month");
+        const monthIndex =
+          inputMonth !== null ? inputMonth - 1 : new Date().getMonth();
 
-    case "month": {
-      await interaction.deferReply({
-        flags: EPHEMERAL_FLAG,
-      });
+        const rows = await storage.listByMonth(monthIndex);
 
-      const inputMonth = interaction.options.getInteger("month");
-      const monthIndex =
-        inputMonth !== null ? inputMonth - 1 : new Date().getMonth();
-
-      storage.listByMonth(monthIndex, (err, rows) => {
-        if (err) {
-          return interaction.editReply({
-            content: "⚠️ Database error.",
-            flags: EPHEMERAL_FLAG,
-          });
-        }
         if (rows.length === 0) {
           return interaction.editReply({
-            content: `No birthdays found for ${
-              monthIndex + 1
-            }/${new Date().getFullYear()}.`,
+            content: `No birthdays found for ${monthArr[monthIndex]}.`,
             flags: EPHEMERAL_FLAG,
           });
         }
@@ -161,46 +124,212 @@ client.on("interactionCreate", async (interaction) => {
           .map((r) => `• ${r.day}/${monthArr[r.month]} — <@${r.user_id}>`)
           .join("\n");
 
-        interaction.editReply({
-          content: `🎂 Birthdays in month ${monthArr[monthIndex]}:\n${list}`,
+        return interaction.editReply({
+          content: `🎂 Birthdays in ${monthArr[monthIndex]}:\n${list}`,
           flags: EPHEMERAL_FLAG,
         });
-      });
+      }
 
-      break;
-    }
+      case "upcoming": {
+        const rows = await storage.listUpcoming(7);
 
-    case "upcoming": {
-      await interaction.deferReply({
-        flags: EPHEMERAL_FLAG,
-      });
-
-      storage.listUpcoming(7, (err, rows) => {
-        if (err) {
-          return interaction.editReply({
-            content: "Database error.",
-            flags: EPHEMERAL_FLAG,
-          });
-        }
         if (rows.length === 0) {
           return interaction.editReply({
             content: "No birthdays upcoming in the next 7 days.",
             flags: EPHEMERAL_FLAG,
           });
         }
+
         const list = rows
           .map((r) => `• ${r.day}/${monthArr[r.month]} — <@${r.user_id}>`)
           .join("\n");
-        interaction.editReply({
-          content: `Upcoming birthdays:\n${list}`,
+
+        return interaction.editReply({
+          content: `🎉 Upcoming birthdays:\n${list}`,
           flags: EPHEMERAL_FLAG,
         });
-      });
+      }
 
-      break;
+      default:
+        return interaction.editReply({
+          content: "❓ Unknown command.",
+          flags: EPHEMERAL_FLAG,
+        });
     }
+  } catch (err) {
+    console.error(`⚠️ Error handling command "${commandName}":`, err);
+    return interaction.editReply({
+      content: "Something went wrong. Please try again later.",
+      flags: EPHEMERAL_FLAG,
+    });
   }
 });
+
+// client.on("interactionCreate", async (interaction) => {
+//   if (!interaction.isCommand()) return;
+//   const { commandName } = interaction;
+//   switch (commandName) {
+//     case "wish": {
+//       await interaction.deferReply({
+//         flags: EPHEMERAL_FLAG,
+//       });
+
+//       const userId = interaction.user.id;
+//       const username = interaction.user.username;
+
+//       storage.getBirthday(userId, (err, row) => {
+//         if (err) {
+//           return interaction.editReply({
+//             content: "Database error.",
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         }
+//         if (row) {
+//           return interaction.editReply({
+//             content:
+//               "You’ve already set your birthday—ask a mod to remove it if it’s wrong.",
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         }
+
+//         const day = interaction.options.getInteger("day");
+//         const monthName = interaction.options.getString("month");
+//         const month = monthArr.indexOf(monthName);
+//         const year = interaction.options.getInteger("year");
+
+//         storage.addBirthday(userId, username, day, month, year, (err) => {
+//           if (err) {
+//             return interaction.editReply({
+//               content: "Could not save your birthday.",
+//               flags: EPHEMERAL_FLAG,
+//             });
+//           }
+
+//           interaction.editReply({
+//             content: `Your birthday is saved as **${day} ${monthName} ${year}**.`,
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         });
+//       });
+
+//       break;
+//     }
+
+//     case "remove": {
+//       await interaction.deferReply({
+//         flags: EPHEMERAL_FLAG,
+//       });
+
+//       const member = interaction.member;
+//       const modRole = process.env.BARISTA_ID;
+//       const adminOne = process.env.MEOW_ID;
+//       const adminTwo = process.env.NOM_ID;
+//       if (
+//         !(
+//           member.roles.cache.has(modRole) ||
+//           member.roles.cache.has(adminOne) ||
+//           member.roles.cache.has(adminTwo)
+//         )
+//       ) {
+//         return interaction.editReply({
+//           content: "You need the Admin or Moderator role to do that.",
+//           flags: EPHEMERAL_FLAG,
+//         });
+//       }
+
+//       const targetUser = interaction.options.getUser("user");
+
+//       storage.deleteBirthday(targetUser.id, (err, changes) => {
+//         if (err) {
+//           return interaction.editReply({
+//             content: "Could not delete birthday. Try again later.",
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         }
+//         if (changes === 0) {
+//           return interaction.editReply({
+//             content: `No birthday found for <@${targetUser.id}>.`,
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         }
+//         interaction.editReply({
+//           content: `Removed birthday for <@${targetUser.id}>.`,
+//           flags: EPHEMERAL_FLAG,
+//         });
+//       });
+
+//       break;
+//     }
+
+//     case "month": {
+//       await interaction.deferReply({
+//         flags: EPHEMERAL_FLAG,
+//       });
+
+//       const inputMonth = interaction.options.getInteger("month");
+//       const monthIndex =
+//         inputMonth !== null ? inputMonth - 1 : new Date().getMonth();
+
+//       storage.listByMonth(monthIndex, (err, rows) => {
+//         if (err) {
+//           return interaction.editReply({
+//             content: "⚠️ Database error.",
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         }
+//         if (rows.length === 0) {
+//           return interaction.editReply({
+//             content: `No birthdays found for ${
+//               monthIndex + 1
+//             }/${new Date().getFullYear()}.`,
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         }
+
+//         const list = rows
+//           .map((r) => `• ${r.day}/${monthArr[r.month]} — <@${r.user_id}>`)
+//           .join("\n");
+
+//         interaction.editReply({
+//           content: `🎂 Birthdays in month ${monthArr[monthIndex]}:\n${list}`,
+//           flags: EPHEMERAL_FLAG,
+//         });
+//       });
+
+//       break;
+//     }
+
+//     case "upcoming": {
+//       await interaction.deferReply({
+//         flags: EPHEMERAL_FLAG,
+//       });
+
+//       storage.listUpcoming(7, (err, rows) => {
+//         if (err) {
+//           return interaction.editReply({
+//             content: "Database error.",
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         }
+//         if (rows.length === 0) {
+//           return interaction.editReply({
+//             content: "No birthdays upcoming in the next 7 days.",
+//             flags: EPHEMERAL_FLAG,
+//           });
+//         }
+//         const list = rows
+//           .map((r) => `• ${r.day}/${monthArr[r.month]} — <@${r.user_id}>`)
+//           .join("\n");
+//         interaction.editReply({
+//           content: `Upcoming birthdays:\n${list}`,
+//           flags: EPHEMERAL_FLAG,
+//         });
+//       });
+
+//       break;
+//     }
+//   }
+// });
 
 client.login(process.env.BOT_TOKEN);
 
