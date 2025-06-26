@@ -47,7 +47,7 @@ export function listUpcoming(daysAhead, cb) {
     for (let i = 0; i < daysAhead; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() + i);
-      upcomingSet.add(`${d.getMonth() + 1}-${d.getDate()}`);
+      upcomingSet.add(`${d.getMonth()}-${d.getDate()}`);
     }
 
     const result = rows.filter((r) => upcomingSet.has(`${r.month}-${r.day}`));

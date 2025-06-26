@@ -4,6 +4,8 @@ import commands from "./commands.js";
 import * as storage from "./storage.js";
 import cron from "node-cron";
 
+const EPHEMERAL_FLAG = 1 << 6;
+
 const monthArr = [
   "January",
   "February",
@@ -32,7 +34,9 @@ client.on("interactionCreate", async (interaction) => {
   const { commandName } = interaction;
   switch (commandName) {
     case "wish": {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({
+        flags: EPHEMERAL_FLAG,
+      });
 
       const userId = interaction.user.id;
       const username = interaction.user.username;
@@ -41,14 +45,14 @@ client.on("interactionCreate", async (interaction) => {
         if (err) {
           return interaction.editReply({
             content: "Database error.",
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
         if (row) {
           return interaction.editReply({
             content:
               "You’ve already set your birthday—ask a mod to remove it if it’s wrong.",
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
 
@@ -61,13 +65,13 @@ client.on("interactionCreate", async (interaction) => {
           if (err) {
             return interaction.editReply({
               content: "Could not save your birthday.",
-              ephemeral: true,
+              flags: EPHEMERAL_FLAG,
             });
           }
 
           interaction.editReply({
             content: `Your birthday is saved as **${day} ${monthName} ${year}**.`,
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         });
       });
@@ -76,7 +80,9 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     case "remove": {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({
+        flags: EPHEMERAL_FLAG,
+      });
 
       const member = interaction.member;
       const modRole = process.env.BARISTA_ID;
@@ -91,7 +97,7 @@ client.on("interactionCreate", async (interaction) => {
       ) {
         return interaction.editReply({
           content: "You need the Admin or Moderator role to do that.",
-          ephemeral: true,
+          flags: EPHEMERAL_FLAG,
         });
       }
 
@@ -101,18 +107,18 @@ client.on("interactionCreate", async (interaction) => {
         if (err) {
           return interaction.editReply({
             content: "Could not delete birthday. Try again later.",
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
         if (changes === 0) {
           return interaction.editReply({
             content: `No birthday found for <@${targetUser.id}>.`,
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
         interaction.editReply({
           content: `Removed birthday for <@${targetUser.id}>.`,
-          ephemeral: true,
+          flags: EPHEMERAL_FLAG,
         });
       });
 
@@ -120,7 +126,9 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     case "month": {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({
+        flags: EPHEMERAL_FLAG,
+      });
 
       const inputMonth = interaction.options.getInteger("month");
       const monthIndex =
@@ -130,7 +138,7 @@ client.on("interactionCreate", async (interaction) => {
         if (err) {
           return interaction.editReply({
             content: "⚠️ Database error.",
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
         if (rows.length === 0) {
@@ -138,17 +146,17 @@ client.on("interactionCreate", async (interaction) => {
             content: `No birthdays found for ${
               monthIndex + 1
             }/${new Date().getFullYear()}.`,
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
 
         const list = rows
-          .map((r) => `• ${r.day}/${r.month + 1} — <@${r.user_id}>`)
+          .map((r) => `• ${r.day}/${monthArr[r.month]} — <@${r.user_id}>`)
           .join("\n");
 
         interaction.editReply({
-          content: `🎂 Birthdays in month ${monthIndex + 1}:\n${list}`,
-          ephemeral: true,
+          content: `🎂 Birthdays in month ${monthArr[monthIndex]}:\n${list}`,
+          flags: EPHEMERAL_FLAG,
         });
       });
 
@@ -156,27 +164,29 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     case "upcoming": {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({
+        flags: EPHEMERAL_FLAG,
+      });
 
       storage.listUpcoming(7, (err, rows) => {
         if (err) {
           return interaction.editReply({
             content: "Database error.",
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
         if (rows.length === 0) {
           return interaction.editReply({
             content: "No birthdays upcoming in the next 7 days.",
-            ephemeral: true,
+            flags: EPHEMERAL_FLAG,
           });
         }
         const list = rows
-          .map((r) => `• ${r.day}/${r.month} — <@${r.user_id}>`)
+          .map((r) => `• ${r.day}/${monthArr[r.month]} — <@${r.user_id}>`)
           .join("\n");
         interaction.editReply({
           content: `Upcoming birthdays:\n${list}`,
-          ephemeral: true,
+          flags: EPHEMERAL_FLAG,
         });
       });
 
