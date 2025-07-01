@@ -211,7 +211,7 @@ Enjoy every moment. You’ve earned it. ☕🍰
 
 // 9 AM summary of yesterday’s birthdays
 cron.schedule(
-  "50 10 * * *",
+  "55 10 * * *",
   async () => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
