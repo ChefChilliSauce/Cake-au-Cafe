@@ -211,16 +211,15 @@ Enjoy every moment. You’ve earned it. ☕🍰
 
 // 9 AM summary of yesterday’s birthdays
 cron.schedule(
-  "55 10 * * *",
+  "0 11 * * *",
   async () => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const day = yesterday.getDate();
-    const monthIndex = yesterday.getMonth();
-    const currentYear = yesterday.getFullYear();
+    const now = new Date();
+    const day = now.getDate();
+    const monthIndex = now.getMonth();
+    const currentYear = now.getFullYear();
 
     try {
-      // fetch all entries for that month, then filter by day
+      // fetch all entries for this month, then filter to today
       const rows = await storage.listByMonth(monthIndex);
       const list = rows.filter((r) => r.day === day);
       if (!list.length) return;
@@ -228,7 +227,7 @@ cron.schedule(
       const channel = client.channels.cache.get(
         process.env.ANNOUNCE_CHANNEL_ID
       );
-      if (!channel) throw new Error("Invalid announce channel");
+      if (!channel) return console.error("Invalid announce channel");
 
       for (const r of list) {
         const yearsOld = currentYear - r.year;
@@ -239,7 +238,6 @@ Please join us in wishing <@${r.user_id}> a fantastic day as they turn **${years
 May the year ahead be filled with joy, warmth, and plenty of cake. 🍰☕
 
 — From everyone at **Cake au Café** 💫`;
-
         await channel.send(message);
       }
     } catch (err) {
