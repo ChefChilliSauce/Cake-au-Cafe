@@ -172,9 +172,8 @@ async function fetchBirthdaysFor(day, monthIndex) {
   return rows.filter((r) => r.day === day);
 }
 
-// Midnight DMs
 cron.schedule(
-  "50 10 * * *",
+  "0 0 * * *",
   async () => {
     const now = new Date();
     const day = now.getDate();
@@ -209,9 +208,8 @@ Enjoy every moment. You’ve earned it. ☕🍰
   { timezone: "Asia/Kolkata" }
 );
 
-// 9 AM summary of yesterday’s birthdays
 cron.schedule(
-  "0 11 * * *",
+  "0 9 * * *",
   async () => {
     const now = new Date();
     const day = now.getDate();
@@ -219,7 +217,6 @@ cron.schedule(
     const currentYear = now.getFullYear();
 
     try {
-      // fetch all entries for this month, then filter to today
       const rows = await storage.listByMonth(monthIndex);
       const list = rows.filter((r) => r.day === day);
       if (!list.length) return;
@@ -247,7 +244,6 @@ May the year ahead be filled with joy, warmth, and plenty of cake. 🍰☕
   { timezone: "Asia/Kolkata" }
 );
 
-// Daily cleanup of departed users at 00:05
 cron.schedule(
   "5 0 * * *",
   async () => {
