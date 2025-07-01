@@ -165,198 +165,29 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// client.on("interactionCreate", async (interaction) => {
-//   if (!interaction.isCommand()) return;
-//   const { commandName } = interaction;
-//   switch (commandName) {
-//     case "wish": {
-//       await interaction.deferReply({
-//         flags: EPHEMERAL_FLAG,
-//       });
-
-//       const userId = interaction.user.id;
-//       const username = interaction.user.username;
-
-//       storage.getBirthday(userId, (err, row) => {
-//         if (err) {
-//           return interaction.editReply({
-//             content: "Database error.",
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         }
-//         if (row) {
-//           return interaction.editReply({
-//             content:
-//               "You’ve already set your birthday—ask a mod to remove it if it’s wrong.",
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         }
-
-//         const day = interaction.options.getInteger("day");
-//         const monthName = interaction.options.getString("month");
-//         const month = monthArr.indexOf(monthName);
-//         const year = interaction.options.getInteger("year");
-
-//         storage.addBirthday(userId, username, day, month, year, (err) => {
-//           if (err) {
-//             return interaction.editReply({
-//               content: "Could not save your birthday.",
-//               flags: EPHEMERAL_FLAG,
-//             });
-//           }
-
-//           interaction.editReply({
-//             content: `Your birthday is saved as **${day} ${monthName} ${year}**.`,
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         });
-//       });
-
-//       break;
-//     }
-
-//     case "remove": {
-//       await interaction.deferReply({
-//         flags: EPHEMERAL_FLAG,
-//       });
-
-//       const member = interaction.member;
-//       const modRole = process.env.BARISTA_ID;
-//       const adminOne = process.env.MEOW_ID;
-//       const adminTwo = process.env.NOM_ID;
-//       if (
-//         !(
-//           member.roles.cache.has(modRole) ||
-//           member.roles.cache.has(adminOne) ||
-//           member.roles.cache.has(adminTwo)
-//         )
-//       ) {
-//         return interaction.editReply({
-//           content: "You need the Admin or Moderator role to do that.",
-//           flags: EPHEMERAL_FLAG,
-//         });
-//       }
-
-//       const targetUser = interaction.options.getUser("user");
-
-//       storage.deleteBirthday(targetUser.id, (err, changes) => {
-//         if (err) {
-//           return interaction.editReply({
-//             content: "Could not delete birthday. Try again later.",
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         }
-//         if (changes === 0) {
-//           return interaction.editReply({
-//             content: `No birthday found for <@${targetUser.id}>.`,
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         }
-//         interaction.editReply({
-//           content: `Removed birthday for <@${targetUser.id}>.`,
-//           flags: EPHEMERAL_FLAG,
-//         });
-//       });
-
-//       break;
-//     }
-
-//     case "month": {
-//       await interaction.deferReply({
-//         flags: EPHEMERAL_FLAG,
-//       });
-
-//       const inputMonth = interaction.options.getInteger("month");
-//       const monthIndex =
-//         inputMonth !== null ? inputMonth - 1 : new Date().getMonth();
-
-//       storage.listByMonth(monthIndex, (err, rows) => {
-//         if (err) {
-//           return interaction.editReply({
-//             content: "⚠️ Database error.",
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         }
-//         if (rows.length === 0) {
-//           return interaction.editReply({
-//             content: `No birthdays found for ${
-//               monthIndex + 1
-//             }/${new Date().getFullYear()}.`,
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         }
-
-//         const list = rows
-//           .map((r) => `• ${r.day}/${monthArr[r.month]} — <@${r.user_id}>`)
-//           .join("\n");
-
-//         interaction.editReply({
-//           content: `🎂 Birthdays in month ${monthArr[monthIndex]}:\n${list}`,
-//           flags: EPHEMERAL_FLAG,
-//         });
-//       });
-
-//       break;
-//     }
-
-//     case "upcoming": {
-//       await interaction.deferReply({
-//         flags: EPHEMERAL_FLAG,
-//       });
-
-//       storage.listUpcoming(7, (err, rows) => {
-//         if (err) {
-//           return interaction.editReply({
-//             content: "Database error.",
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         }
-//         if (rows.length === 0) {
-//           return interaction.editReply({
-//             content: "No birthdays upcoming in the next 7 days.",
-//             flags: EPHEMERAL_FLAG,
-//           });
-//         }
-//         const list = rows
-//           .map((r) => `• ${r.day}/${monthArr[r.month]} — <@${r.user_id}>`)
-//           .join("\n");
-//         interaction.editReply({
-//           content: `Upcoming birthdays:\n${list}`,
-//           flags: EPHEMERAL_FLAG,
-//         });
-//       });
-
-//       break;
-//     }
-//   }
-// });
-
 client.login(process.env.BOT_TOKEN);
 
-function fetchBirthdaysFor(day, monthIndex, cb) {
-  storage.listByMonth(monthIndex, (err, rows) => {
-    if (err) return cb(err);
-    const matched = rows.filter((r) => r.day === day);
-    cb(null, matched);
-  });
+async function fetchBirthdaysFor(day, monthIndex) {
+  const rows = await storage.listByMonth(monthIndex);
+  return rows.filter((r) => r.day === day);
 }
 
+// Midnight DMs
 cron.schedule(
-  "0 0 * * *",
-  () => {
+  "50 10 * * *",
+  async () => {
     const now = new Date();
     const day = now.getDate();
     const monthIndex = now.getMonth();
 
-    fetchBirthdaysFor(day, monthIndex, (err, list) => {
-      if (err) return console.error("Cron DB error:", err);
-      if (!list.length) return;
+    try {
+      const list = await fetchBirthdaysFor(day, monthIndex);
+      if (list.length === 0) return;
 
-      list.forEach((r) => {
-        client.users
-          .fetch(r.user_id)
-          .then((user) => {
-            const birthdayMsg = `🐾 taptap... you there?
+      for (const r of list) {
+        const user = await client.users.fetch(r.user_id);
+        const msg = `🐾 taptap... you there?
+
 
 **Mrow~! Whisker here!**  
 Reporting straight from the cozy corners of Cake au Café...
@@ -369,33 +200,37 @@ and everything comforting — just like a perfect café morning.
 Enjoy every moment. You’ve earned it. ☕🍰  
 **Happy Birthday!** 🎈!`;
 
-            return user.send(birthdayMsg);
-          })
-          .catch(console.error);
-      });
-    });
+        await user.send(msg);
+      }
+    } catch (err) {
+      console.error("Cron error:", err);
+    }
   },
   { timezone: "Asia/Kolkata" }
 );
 
+// 9 AM summary of yesterday’s birthdays
 cron.schedule(
-  "0 9 * * *",
-  () => {
-    const now = new Date();
-    const day = now.getDate();
-    const monthIndex = now.getMonth();
-    const currentYear = now.getFullYear();
+  "50 10 * * *",
+  async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const day = yesterday.getDate();
+    const monthIndex = yesterday.getMonth();
+    const currentYear = yesterday.getFullYear();
 
-    fetchBirthdaysFor(day, monthIndex, (err, list) => {
-      if (err) return console.error("Cron DB error:", err);
+    try {
+      // fetch all entries for that month, then filter by day
+      const rows = await storage.listByMonth(monthIndex);
+      const list = rows.filter((r) => r.day === day);
       if (!list.length) return;
 
       const channel = client.channels.cache.get(
         process.env.ANNOUNCE_CHANNEL_ID
       );
-      if (!channel) return console.error("Invalid announce channel");
+      if (!channel) throw new Error("Invalid announce channel");
 
-      list.forEach((r) => {
+      for (const r of list) {
         const yearsOld = currentYear - r.year;
         const message = `🎉 It's birthday time! 🎂
 
@@ -405,45 +240,39 @@ May the year ahead be filled with joy, warmth, and plenty of cake. 🍰☕
 
 — From everyone at **Cake au Café** 💫`;
 
-        channel.send(message);
-      });
-    });
+        await channel.send(message);
+      }
+    } catch (err) {
+      console.error("9 AM Cron error:", err);
+    }
   },
-  {
-    timezone: "Asia/Kolkata",
-  }
+  { timezone: "Asia/Kolkata" }
 );
 
+// Daily cleanup of departed users at 00:05
 cron.schedule(
   "5 0 * * *",
   async () => {
-    const guild = client.guilds.cache.get(process.env.GUILD_ID);
-    if (!guild) return console.error("Cleanup: guild not found");
-
-    storage.listAll((err, rows) => {
-      if (err) return console.error("Cleanup DB error:", err);
-
-      rows.forEach((r) => {
-        guild.members
-          .fetch(r.user_id)
-          .then(() => {})
-          .catch((error) => {
-            if (error.code === 10007) {
-              storage.deleteBirthday(r.user_id, (err, changes) => {
-                if (err) return console.error("Cleanup delete error:", err);
-                if (changes)
-                  console.log(
-                    `Cleaned up birthday for departed user ${r.user_id}`
-                  );
-              });
-            } else {
-              console.error("Cleanup fetch error:", error);
+    try {
+      const guild = await client.guilds.fetch(process.env.GUILD_ID);
+      const rows = await storage.listAll();
+      for (const r of rows) {
+        try {
+          await guild.members.fetch(r.user_id);
+        } catch (error) {
+          if (error.code === 10007) {
+            const changes = await storage.deleteBirthday(r.user_id);
+            if (changes) {
+              console.log(`Cleaned up birthday for departed user ${r.user_id}`);
             }
-          });
-      });
-    });
+          } else {
+            console.error("Cleanup fetch error:", error);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Cleanup Cron error:", err);
+    }
   },
-  {
-    timezone: "Asia/Kolkata",
-  }
+  { timezone: "Asia/Kolkata" }
 );
