@@ -1,3 +1,5 @@
+# Major bug fix underway
+
 # 🎂 Birthday Bot for Discord - V1
 
 A fun and reliable Discord bot that tracks users' birthdays and sends celebratory messages in your server!  
