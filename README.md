@@ -1,3 +1,7 @@
+# fixing the double wishing
+# the auto check and remove time is changed
+
+
 # Major bug fix underway
 
 # 🎂 Birthday Bot for Discord - V1
